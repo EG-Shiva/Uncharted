@@ -1,0 +1,4 @@
+shape (116, 6) max cosine (50 digits): 0.59636284405056982763 at pair (38, 95)
+improvement over record: 8.16491e-7
+min angle (deg): 53.3901527419549
+found by run: hunt_6d_116 (pictures on)

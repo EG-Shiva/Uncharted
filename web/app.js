@@ -20,6 +20,16 @@ const state = {
 };
 
 const isRecordRun = (r) => r.record_program != null;
+
+// One entry per problem: the run with the best result.
+function bestRecordRuns() {
+  const best = new Map();
+  for (const r of state.index.filter(isRecordRun)) {
+    const cur = best.get(r.problem);
+    if (!cur || r.gap_to_record < cur.gap_to_record) best.set(r.problem, r);
+  }
+  return [...best.values()].sort((a, b) => a.gap_to_record - b.gap_to_record);
+}
 const dataUrl = (run, rel) => `data/${encodeURIComponent(run)}/${rel}`;
 
 function friendlyTitle(r) {
@@ -66,7 +76,7 @@ async function loadIndex() {
   renderRecords();
   const sel = $("runSelect");
   const ordered = [...state.index].sort((a, b) => (isRecordRun(b) - isRecordRun(a)) || ((a.gap_to_record ?? 0) - (b.gap_to_record ?? 0)));
-  sel.innerHTML = ordered.map((r) => `<option value="${esc(r.name)}">${isRecordRun(r) ? "★ Record: " : ""}${esc(friendlyTitle(r))}</option>`).join("");
+  sel.innerHTML = ordered.map((r) => `<option value="${esc(r.name)}">${isRecordRun(r) ? "★ Record: " : ""}${esc(friendlyTitle(r))}${r.use_images === false ? " (experiment: numbers only, no pictures)" : ""}</option>`).join("");
   const wanted = new URLSearchParams(location.search).get("run");
   const first = ordered.find((r) => r.name === wanted) || ordered[0];
   if (first) { sel.value = first.name; await selectRun(first.name); }
@@ -74,7 +84,7 @@ async function loadIndex() {
 
 function renderStats() {
   const runs = state.index;
-  const records = runs.filter(isRecordRun).length;
+  const records = bestRecordRuns().length;
   const programs = runs.reduce((s, r) => s + r.programs, 0);
   $("recCount").textContent = records;
   $("stats").innerHTML = [
@@ -85,10 +95,10 @@ function renderStats() {
 }
 
 function renderRecords() {
-  const recs = state.index.filter(isRecordRun).sort((a, b) => (a.gap_to_record ?? 0) - (b.gap_to_record ?? 0));
+  const recs = bestRecordRuns();
   $("recordCards").innerHTML = recs.map((r) => `
     <div class="record" data-run="${esc(r.name)}">
-      <div class="tag">NEW WORLD RECORD · VERIFIED</div>
+      <div class="tag">NEW WORLD RECORD · VERIFIED${r.use_images === false ? " · NUMBERS-ONLY RUN" : ""}</div>
       <h3>${esc(friendlyTitle(r))}</h3>
       <div class="row"><span>Best published before</span><span>${r.best_known.toFixed(12)}</span></div>
       <div class="row"><span>Found by the AI</span><span class="new">${r.best_score.toFixed(12)}</span></div>
@@ -484,7 +494,7 @@ function drawSphere() {
 }
 
 $("watchBtn").addEventListener("click", () => {
-  const best = state.index.filter(isRecordRun).sort((a, b) => (a.gap_to_record ?? 0) - (b.gap_to_record ?? 0))[0];
+  const best = bestRecordRuns().find((r) => r.use_images !== false) || bestRecordRuns()[0];
   if (best) watch(best.name);
 });
 $("playBtn").addEventListener("click", () => {

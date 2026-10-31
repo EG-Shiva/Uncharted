@@ -10,12 +10,15 @@ An AI research lab built on Meta's Muse models that hunts for new world records 
 
 | Problem | Published record | Ours | Status |
 |---|---|---|---|
-| Spherical code, 153 points in 4D (max cosine, lower is better) | 0.849102358280 ([spherical-codes.org](https://spherical-codes.org/)) | **0.849102250950** | New record, verified at 50 digits |
+| Spherical code, 116 points in 6D (max cosine, lower is better) | 0.596363660542 ([spherical-codes.org](https://spherical-codes.org/)) | **0.596362844051** | New record, verified at 50 digits |
+| Spherical code, 153 points in 4D | 0.849102358280 | **0.849102176174** | New record, verified at 50 digits |
 | Spherical code, 163 points in 4D | 0.856415430312 | **0.856414859773** | New record, verified at 50 digits |
 | Spherical code, 168 points in 4D | 0.859313315478 | **0.859313146285** | New record, verified at 50 digits |
 | Spherical code, 272 points in 4D | 0.898160315150 | **0.898159960309** | New record, verified at 50 digits |
 | Spherical code, 292 points in 4D | 0.903471504338 | **0.903470816563** | New record, verified at 50 digits |
-| 26 circles in a square (sum of radii, higher is better) | 2.6359830849 | 2.6359404147 | Beats AlphaEvolve's 2.635863 |
+| 26 circles in a square (sum of radii, higher is better) | 2.6359830849 | 2.6359404147 | Beats AlphaEvolve's 2.635863, not the current best |
+
+The sphere searches start from the best published arrangement and look for a better one. Plain local polishing of the published codes gives no improvement, so each record required the AI to rearrange the points.
 
 Evidence for each record (coordinates, the AI-written program, picture, verification) is in [`records/`](records/).
 

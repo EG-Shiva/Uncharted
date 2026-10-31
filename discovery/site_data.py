@@ -39,6 +39,7 @@ def run_summary(run_dir: Path) -> dict | None:
         "best_known_source": meta.get("best_known_source"),
         "maximize": meta.get("maximize"),
         "worker_model": meta.get("worker_model"),
+        "use_images": meta.get("use_images", True),
         "lead_model": meta.get("lead_model"),
         "started": meta.get("started"),
         "programs": len(candidates),
