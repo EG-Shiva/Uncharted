@@ -13,9 +13,16 @@ An AI research lab built on Meta's Muse models that hunts for new world records 
 | Spherical code, 153 points in 4D (max cosine, lower is better) | 0.849102358280 ([spherical-codes.org](https://spherical-codes.org/)) | **0.849102250950** | New record, verified at 50 digits |
 | Spherical code, 163 points in 4D | 0.856415430312 | **0.856414859773** | New record, verified at 50 digits |
 | Spherical code, 168 points in 4D | 0.859313315478 | **0.859313146285** | New record, verified at 50 digits |
+| Spherical code, 272 points in 4D | 0.898160315150 | **0.898159960309** | New record, verified at 50 digits |
 | 26 circles in a square (sum of radii, higher is better) | 2.6359830849 | 2.6359404147 | Beats AlphaEvolve's 2.635863 |
 
 Evidence for each record (coordinates, the AI-written program, picture, verification) is in [`records/`](records/).
+
+## Watch the lab
+
+**[Live replay page](https://eg-shiva.github.io/Uncharted/)**: replay any run program by program. You see the idea behind each program, the picture the worker studied, Muse Wonder's diagnoses, and the moment the record falls.
+
+Locally, `python -m discovery.web` serves the same page at http://127.0.0.1:8765, reading `runs/` live while the engine works. `python tools/export_site.py` rebuilds the static copy in `docs/`.
 
 ## Run it
 

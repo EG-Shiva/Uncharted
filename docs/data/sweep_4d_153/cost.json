@@ -1,0 +1,20 @@
+{
+  "total": 0.548029942,
+  "budget": 1.5,
+  "by_model": {
+    "muse-spark-1.3-contributor": {
+      "calls": 64,
+      "input": 273979,
+      "cached": 50471,
+      "output": 480491,
+      "cost": 0.11854994199999999
+    },
+    "muse-wonder-1.0": {
+      "calls": 4,
+      "input": 32355,
+      "cached": 0,
+      "output": 15003,
+      "cost": 0.42948
+    }
+  }
+}

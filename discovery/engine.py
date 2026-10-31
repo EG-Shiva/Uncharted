@@ -85,7 +85,7 @@ class DiscoveryEngine:
         prev_best = self.db.best()
         self.db.add(prog)
         self.events.emit("candidate", id=prog.id, parent=prog.parent_id, valid=prog.valid, score=round(prog.score, 13),
-                         idea=idea[:160], picture=picture_note[:200], message=prog.message[:160], cost_total=round(self.ledger.total, 4))
+                         idea=idea[:160], picture=picture_note[:600], message=prog.message[:160], cost_total=round(self.ledger.total, 4))
         if prog.valid and (prev_best is None or self.problem.better(prog.score, prev_best.score)):
             self._new_best(prog, run.output)
         return prog
@@ -139,7 +139,7 @@ class DiscoveryEngine:
                 self.strategy = diagnosis
                 self.directions = directions
             (self.run_dir / "strategy.md").write_text(res.text, encoding="utf-8")
-            self.events.emit("strategy", model=res.model, diagnosis=diagnosis[:400], directions=len(directions),
+            self.events.emit("strategy", model=res.model, diagnosis=diagnosis[:1500], directions=len(directions),
                              cost=round(res.cost, 4), cost_total=round(self.ledger.total, 4))
 
     def run(self, iterations: int):

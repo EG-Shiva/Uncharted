@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Uncharted · AI that breaks world records in mathematics</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="brand">UNCHARTED</div>
+    <h1>Meta's Muse models, hunting for new world records in mathematics.</h1>
+    <p class="sub">Muse Spark writes solver programs and looks at a picture of every result. Muse Wonder runs the lab as principal investigator.
+      An exact verifier decides what counts. Every record below beats the published table and is checked to 50 digits.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section class="records-wrap">
+    <h2>Records broken</h2>
+    <div class="records" id="records"></div>
+  </section>
+
+  <section class="lab" id="lab">
+    <div class="lab-head">
+      <h2>Inside the lab</h2>
+      <div class="controls">
+        <select id="runSelect" aria-label="Run"></select>
+        <button id="playBtn" class="primary">Play</button>
+        <div class="speeds" id="speeds">
+          <button data-speed="1">1×</button><button data-speed="4" class="on">4×</button><button data-speed="16">16×</button>
+        </div>
+        <button id="recordBtn" class="gold" hidden>Jump to the record</button>
+        <span class="live" id="liveBadge" hidden>LIVE</span>
+      </div>
+    </div>
+    <input type="range" id="scrubber" min="0" max="0" value="0" aria-label="Replay position">
+    <div class="run-title" id="runTitle"></div>
+
+    <div class="lab-grid">
+      <div class="feed" id="feed"></div>
+      <aside class="side">
+        <div class="panel">
+          <div class="panel-title">Score vs the published record</div>
+          <canvas id="chart" width="560" height="300"></canvas>
+          <div class="legend"><span class="dot pt"></span>program <span class="dot best"></span>lab best <span class="dash"></span>published record</div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Current best solution <span id="bestLabel" class="muted"></span></div>
+          <img id="bestImg" alt="Picture of the current best solution">
+          <div class="best-nums" id="bestNums"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step"><b>1 · Muse Spark writes code</b><p>Eight workers each take a parent program, its picture and the lab's strategy, and write a new solver.</p></div>
+      <div class="step"><b>2 · Sandbox and verifier</b><p>Each program runs isolated, with no credentials and a hard time limit. A strict verifier scores the output.</p></div>
+      <div class="step"><b>3 · Pictures, not just numbers</b><p>Every result is rendered (contact graphs, slack profiles, packings), and workers study the picture before writing the next program.</p></div>
+      <div class="step"><b>4 · Muse Wonder leads</b><p>Every few rounds the principal investigator reads the top programs and the best picture, diagnoses the stall and assigns new directions.</p></div>
+    </div>
+  </section>
+
+  <footer>Built for the Meta Global AI Developer Hackathon · Record table: <a href="https://spherical-codes.org/" target="_blank" rel="noopener">spherical-codes.org</a> (Henry Cohn)</footer>
+
+  <dialog id="modal">
+    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <div id="modalBody"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
