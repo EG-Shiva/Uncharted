@@ -1,0 +1,31 @@
+# Muse Discovery
+
+An AI research lab built on Meta's Muse models that hunts for new world records on open mathematical problems.
+
+- **Muse Spark** workers write solver programs. Each program runs in a sandbox and is scored by an exact verifier.
+- Workers **look at a rendered picture** of every solution (contact graphs, slack profiles, packings) before writing the next program.
+- **Muse Wonder** acts as principal investigator: it reads the top programs and the best picture, diagnoses why progress stalls, and assigns new research directions.
+
+## Results
+
+| Problem | Published record | Ours | Status |
+|---|---|---|---|
+| Spherical code, 168 points in 4D (max cosine, lower is better) | 0.859313315478 ([spherical-codes.org](https://spherical-codes.org/)) | **0.859313146285** | New record, verified at 50 digits |
+| 26 circles in a square (sum of radii, higher is better) | 2.6359830849 | 2.6359404147 | Beats AlphaEvolve's 2.635863 |
+
+Evidence for each record (coordinates, the AI-written program, picture, verification) is in [`records/`](records/).
+
+## Run it
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\pip install openai numpy scipy matplotlib python-dotenv mpmath
+# put MODEL_API_KEY=... in .env
+.\.venv\Scripts\python -m discovery.run --problem spherical_code_4d_168 --iterations 100 --workers 8 --budget 5
+```
+
+Verify a code independently:
+
+```powershell
+.\.venv\Scripts\python tools\verify_code.py records\spherical_4d_168\code_4_168.csv 0.859313315479
+```
