@@ -36,6 +36,12 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         if path == "/data/index.json":
             return self._json(site_data.index())
+        if path == "/data/records.json":
+            return self._json(site_data.records())
+        if path == "/data/stats.json":
+            return self._json(site_data.model_stats())
+        if path == "/data/ablation.json":
+            return self._json(site_data.ablation())
         if path.startswith("/data/"):
             run, _, rest = path[len("/data/"):].partition("/")
             run_dir = RUNS_DIR / run

@@ -37,6 +37,9 @@ def main():
     for r in runs:
         r.pop("cost", None)
     (data / "index.json").write_text(json.dumps({"runs": runs}))
+    (data / "records.json").write_text(json.dumps(site_data.records()))
+    (data / "stats.json").write_text(json.dumps(site_data.model_stats()))
+    (data / "ablation.json").write_text(json.dumps(site_data.ablation()))
     for name in names:
         src, dst = RUNS_DIR / name, data / name
         for sub in ("images", "thumbs", "code"):

@@ -86,7 +86,7 @@ function renderStats() {
 
 function renderRecords() {
   const recs = state.index.filter(isRecordRun).sort((a, b) => (a.gap_to_record ?? 0) - (b.gap_to_record ?? 0));
-  $("records").innerHTML = recs.map((r) => `
+  $("recordCards").innerHTML = recs.map((r) => `
     <div class="record" data-run="${esc(r.name)}">
       <div class="tag">NEW WORLD RECORD · VERIFIED</div>
       <h3>${esc(friendlyTitle(r))}</h3>
@@ -377,6 +377,112 @@ async function openProgram(id) {
   $("modal").showModal();
 }
 
+const REPO = "https://github.com/EG-Shiva/Uncharted/blob/main/";
+
+async function getJSON(path) {
+  try {
+    const r = await fetch(path, { cache: "no-store" });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+
+async function loadExtras() {
+  const [recs, stats, abl] = await Promise.all([getJSON("data/records.json"), getJSON("data/stats.json"), getJSON("data/ablation.json")]);
+  if (recs?.length) { setupSphere(recs); renderProof(recs); }
+  if (stats) {
+    $("statSpark").textContent = stats.spark_programs.toLocaleString();
+    $("statPics").textContent = stats.pictures_studied.toLocaleString();
+    $("statWonder").textContent = stats.wonder_memos.toLocaleString();
+  }
+  if (abl?.length) renderAblation(abl);
+}
+
+function renderProof(recs) {
+  const rows = [...recs].sort((a, b) => a.d - b.d || a.n - b.n).map((r) => `
+    <tr><td>${r.n} points, ${r.d} dimensions</td><td class="num">${r.best_known.toFixed(12)}</td><td class="num goldtxt">${r.score.toFixed(12)}</td>
+      <td class="num">${plain(r.best_known - r.score)}</td>
+      <td><a href="${REPO}${r.csv}" target="_blank" rel="noopener">coordinates</a> · <a href="${REPO}${r.verification}" target="_blank" rel="noopener">50-digit check</a></td></tr>`).join("");
+  $("proofTable").innerHTML = `<table><thead><tr><th>Record</th><th>Published best</th><th>Found by the AI</th><th>Better by</th><th>Files</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderAblation(rows) {
+  const desc = (o) => (o.beat ? `<span class="goldtxt">record broken (attempt ${o.first_beat_at})</span>` : `<span class="muted">no record</span>`);
+  $("ablation").innerHTML = rows.map((r) => `
+    <div class="abl"><b>${esc(r.label)}</b>
+      <div class="row"><span>With pictures</span>${desc(r.with_pictures)}</div>
+      <div class="row"><span>Numbers only</span>${desc(r.without_pictures)}</div></div>`).join("");
+  const on = rows.filter((r) => r.with_pictures.beat).length, off = rows.filter((r) => r.without_pictures.beat).length;
+  $("ablation").insertAdjacentHTML("afterend", `<p class="abl-summary">With pictures the AI broke <b class="goldtxt">${on} of ${rows.length}</b> records;
+    with numbers only it broke <b>${off} of ${rows.length}</b>.</p>`);
+  $("ablationBox").hidden = false;
+}
+
+const sphere = { recs: [], cur: null, edges: [], t: 0, visible: true, raf: 0 };
+
+function setupSphere(recs) {
+  sphere.recs = [...recs].sort((a, b) => b.n - a.n);
+  $("sphereSelect").innerHTML = sphere.recs.map((r, i) => `<option value="${i}">${r.n} points · ${r.d}D</option>`).join("");
+  $("sphereSelect").addEventListener("change", (e) => pickSphere(+e.target.value));
+  new IntersectionObserver(([e]) => { sphere.visible = e.isIntersecting; }).observe($("sphere"));
+  pickSphere(0);
+  const loop = () => { if (sphere.visible) drawSphere(); sphere.raf = requestAnimationFrame(loop); };
+  loop();
+}
+
+function pickSphere(i) {
+  const r = sphere.recs[i];
+  const P = r.points;
+  let max = -2;
+  const dots = [];
+  for (let a = 0; a < P.length; a++) for (let b = a + 1; b < P.length; b++) {
+    let s = 0;
+    for (let k = 0; k < r.d; k++) s += P[a][k] * P[b][k];
+    dots.push([a, b, s]);
+    if (s > max) max = s;
+  }
+  sphere.edges = dots.filter((x) => x[2] > max - 1e-6).map((x) => [x[0], x[1]]);
+  sphere.cur = r;
+  $("sphereCaption").textContent = `Record: ${r.n} points in ${r.d} dimensions, turning through the extra dimension. Lines join points at the closest allowed distance (${sphere.edges.length} pairs).`;
+}
+
+function rot(v, i, j, a) {
+  const c = Math.cos(a), s = Math.sin(a), x = v[i], y = v[j];
+  v[i] = c * x - s * y; v[j] = s * x + c * y;
+}
+
+function drawSphere() {
+  const r = sphere.cur;
+  if (!r) return;
+  const cv = $("sphere"), ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+  sphere.t += 0.004;
+  const t = sphere.t;
+  const proj = r.points.map((p) => {
+    const v = p.slice(0, Math.max(4, r.d));
+    while (v.length < 4) v.push(0);
+    rot(v, 0, 3, t * 0.9); rot(v, 1, 3, t * 0.55); rot(v, 0, 2, t * 1.4); rot(v, 1, 2, 0.35);
+    const f = 3.2, sc = (W * 0.36) * f / (f - v[2]);
+    return { x: W / 2 + v[0] * sc, y: H / 2 + v[1] * sc, z: v[2], w: v[3] };
+  });
+  ctx.clearRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(W / 2, H / 2, W * 0.05, W / 2, H / 2, W * 0.48);
+  g.addColorStop(0, "rgba(79,140,255,0.10)"); g.addColorStop(1, "rgba(79,140,255,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(W / 2, H / 2, W * 0.48, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 0.7;
+  for (const [a, b] of sphere.edges) {
+    const A = proj[a], B = proj[b];
+    const depth = (A.z + B.z + 2) / 4;
+    ctx.strokeStyle = `rgba(150,170,210,${0.08 + 0.32 * depth})`;
+    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+  }
+  const order = proj.map((p, i) => i).sort((i, j) => proj[i].z - proj[j].z);
+  for (const i of order) {
+    const p = proj[i], depth = (p.z + 1) / 2, mix = (p.w + 1) / 2;
+    const R = Math.round(79 + (245 - 79) * mix), G = Math.round(140 + (197 - 140) * mix), B = Math.round(255 + (66 - 255) * mix);
+    ctx.fillStyle = `rgba(${R},${G},${B},${0.45 + 0.55 * depth})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.2 + 2.6 * depth, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
 $("watchBtn").addEventListener("click", () => {
   const best = state.index.filter(isRecordRun).sort((a, b) => (a.gap_to_record ?? 0) - (b.gap_to_record ?? 0))[0];
   if (best) watch(best.name);
@@ -404,3 +510,4 @@ $("keepWatching").addEventListener("click", () => {
 $("closeCelebrate").addEventListener("click", () => $("celebrate").close());
 
 loadIndex();
+loadExtras();

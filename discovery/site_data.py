@@ -60,5 +60,67 @@ def index(runs_dir: Path = RUNS_DIR, names: list[str] | None = None) -> dict:
     return {"runs": runs}
 
 
+RECORDS_DIR = RUNS_DIR.parent / "records"
+
+
+def records() -> list[dict]:
+    """Verified records with coordinates, for the 3D viewer and the proof section."""
+    out = []
+    for rec in sorted(RECORDS_DIR.glob("spherical_*")):
+        sol = rec / "solution.json"
+        csv = next(rec.glob("code_*.csv"), None)
+        if not sol.exists() or csv is None:
+            continue
+        info = json.loads(sol.read_text())
+        d, n = rec.name.split("_")[1:]
+        pts = [[round(float(v), 9) for v in line.split(",")] for line in csv.read_text().splitlines() if line.strip()]
+        out.append({"key": f"{d}_{n}", "d": int(d[:-1]), "n": int(n), "score": info["score"], "best_known": info["best_known"],
+                    "csv": f"records/{rec.name}/{csv.name}", "verification": f"records/{rec.name}/verification.txt", "points": pts})
+    return out
+
+
+def model_stats(runs: list[str] | None = None) -> dict:
+    spark = wonder = pictures = 0
+    for d in RUNS_DIR.iterdir():
+        if not d.is_dir() or (runs is not None and d.name not in runs):
+            continue
+        for e in read_jsonl(d / "events.jsonl"):
+            if e["type"] == "candidate" and e.get("parent") is not None:
+                spark += 1
+                if e.get("picture") and e["picture"].lower() != "none":
+                    pictures += 1
+            elif e["type"] == "strategy":
+                wonder += 1
+    return {"spark_programs": spark, "wonder_memos": wonder, "pictures_studied": pictures}
+
+
+def _outcome(run_dir: Path, require_finished: bool = True) -> dict | None:
+    s = run_summary(run_dir)
+    if not s or (require_finished and not s["finished"]):
+        return None
+    first, count = None, 0
+    tol = 1e-9 * max(1.0, abs(s["best_known"] or 1))
+    for e in read_jsonl(run_dir / "events.jsonl"):
+        if e["type"] == "candidate":
+            count += 1
+        elif e["type"] == "new_best" and first is None and (e.get("gap_to_record") or 0) < -tol:
+            first = count
+    gap = s["gap_to_record"] or 0.0
+    return {"run": run_dir.name, "programs": s["programs"], "gap": gap, "beat": gap < -tol, "first_beat_at": first}
+
+
+def ablation() -> list[dict]:
+    """Same targets with and without the solution pictures."""
+    rows = []
+    for off_dir in sorted(RUNS_DIR.glob("ablation_*")):
+        t = off_dir.name.split("_", 1)[1]
+        on_dir = RUNS_DIR / ("sc_4d_168_v1" if t == "4d_168" else f"sweep_{t}")
+        on, off = _outcome(on_dir, require_finished=False), _outcome(off_dir)
+        if on and off:
+            d, n = t.split("_")
+            rows.append({"target": t, "label": f"{n} points, {d[:-1]}D", "with_pictures": on, "without_pictures": off})
+    return rows
+
+
 def programs(run_dir: Path) -> list[dict]:
     return [{k: p.get(k) for k in PROGRAM_FIELDS} for p in read_jsonl(run_dir / "programs.jsonl")]

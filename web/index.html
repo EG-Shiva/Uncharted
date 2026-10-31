@@ -8,16 +8,31 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="hero">
-    <div class="brand">UNCHARTED</div>
-    <h1>AI built on Meta's Muse models has beaten <span id="recCount" class="goldtxt">5</span> world records in mathematics.</h1>
-    <p class="sub">We built an AI research team. It invents its own methods, writes the code, tests it, studies pictures of its results,
-      and keeps going until it finds a better answer than the best one mathematicians have ever published.</p>
-    <div class="stats" id="stats"></div>
-    <button class="primary big" id="watchBtn">▶ Watch the AI break a record <span class="muted-inline">(about 30 seconds)</span></button>
+  <nav class="topnav">
+    <a class="logo" href="#top">UNCHARTED</a>
+    <div class="links">
+      <a href="#story">How it works</a><a href="#records">Records</a><a href="#lab">Watch</a><a href="#proof">Proof</a><a href="#meta">Meta AI</a><a href="#faq">FAQ</a>
+      <a class="gh" href="https://github.com/EG-Shiva/Uncharted" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="hero-text">
+      <div class="brand">UNCHARTED</div>
+      <h1>AI built on Meta's Muse models has beaten <span id="recCount" class="goldtxt">5</span> world records in mathematics.</h1>
+      <p class="sub">We built an AI research team. It invents its own methods, writes the code, tests it, studies pictures of its results,
+        and keeps going until it finds a better answer than the best one mathematicians have ever published.</p>
+      <div class="stats" id="stats"></div>
+      <button class="primary big" id="watchBtn">▶ Watch the AI break a record <span class="muted-inline">(about 30 seconds)</span></button>
+    </div>
+    <figure class="hero-viz">
+      <canvas id="sphere" width="520" height="520" aria-label="Rotating view of a record arrangement"></canvas>
+      <figcaption><span id="sphereCaption">A record found by the AI</span>
+        <select id="sphereSelect" aria-label="Choose a record to view"></select></figcaption>
+    </figure>
   </header>
 
-  <section class="story">
+  <section class="story" id="story">
     <h2>The story in 30 seconds</h2>
     <div class="steps">
       <div class="step"><div class="num">1</div><b>The challenge</b><p>Spread a number of points over a sphere so that no two are close together.
@@ -31,10 +46,10 @@
       And it shows AI doing real research: finding results nobody had found before.</p>
   </section>
 
-  <section class="records-wrap">
+  <section class="records-wrap" id="records">
     <h2>The records</h2>
     <p class="hint">Score = how close the two nearest points are. <b>Lower is better.</b> Click a record to watch how the AI found it.</p>
-    <div class="records" id="records"></div>
+    <div class="records" id="recordCards"></div>
   </section>
 
   <section class="lab" id="lab">
@@ -83,6 +98,60 @@
         </div>
       </aside>
     </div>
+  </section>
+
+  <section id="proof">
+    <h2>How do we know it's real?</h2>
+    <p class="hint">You don't have to trust us. Every claim can be checked by anyone in a few minutes.</p>
+    <div class="steps proof-steps">
+      <div class="step"><div class="num">1</div><b>The published best</b><p>Each record we beat is listed in
+        <a href="https://spherical-codes.org/" target="_blank" rel="noopener">Henry Cohn's public table</a> (MIT), the standard reference for this problem.</p></div>
+      <div class="step"><div class="num">2</div><b>Our coordinates</b><p>The exact positions of every point are public. Download them below and compute the score yourself.</p></div>
+      <div class="step"><div class="num">3</div><b>A strict, independent check</b><p>A separate program recomputes every pair of points with 50-digit arithmetic,
+        far beyond normal computer precision. The improvements are more than 100,000 times larger than any rounding error.</p></div>
+      <div class="step"><div class="num">4</div><b>Run it yourself</b><p><code>python tools/verify_code.py records/spherical_4d_292/code_4_292.csv 0.903471504338</code></p></div>
+    </div>
+    <div class="proof-table" id="proofTable"></div>
+  </section>
+
+  <section id="meta">
+    <h2>Meta's models at work</h2>
+    <div class="meta-grid">
+      <div class="mcard spark-card"><div class="chip spark">Muse Spark</div><h3>The researchers</h3>
+        <p>Eight Muse Spark workers each read a parent program, the lab's strategy, and a <b>picture of the parent's answer</b>, then write a complete new program.
+          Each worker explains what it noticed in the picture before coding.</p>
+        <div class="mstat"><b id="statSpark">–</b> programs written · <b id="statPics">–</b> pictures studied</div></div>
+      <div class="mcard wonder-card"><div class="chip wonder">Muse Wonder</div><h3>The lead researcher</h3>
+        <p>Every 16 attempts, Muse Wonder reviews the best programs and the best picture, explains why progress has stalled,
+          and hands the team four new research directions.</p>
+        <div class="mstat"><b id="statWonder">–</b> strategy memos</div></div>
+      <div class="mcard"><div class="chip dir">Verifier</div><h3>The referee (not AI)</h3>
+        <p>Programs run in an isolated sandbox with no internet keys and a time limit. A strict checker scores every answer.
+          The AI can propose anything, but only the checker decides what counts.</p></div>
+    </div>
+    <div id="ablationBox" hidden>
+      <h3 class="sub-h">Do the pictures help? An experiment</h3>
+      <p class="hint">We ran the same targets twice with the same number of attempts: once where the AI sees pictures of its answers, once with numbers only.</p>
+      <div class="ablation" id="ablation"></div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <h2>Questions judges ask</h2>
+    <details class="faq"><summary>Are these really new results?</summary><p>Yes. Each one beats the value listed in the public table at the time we checked it,
+      and the coordinates are public so anyone can confirm. We are submitting them to the table's maintainer for official listing.</p></details>
+    <details class="faq"><summary>Did the AI start from scratch?</summary><p>No, and we say so openly. For the sphere records, the AI starts from the best published arrangement
+      and searches for a different, better one nearby. Simple local polishing of the published answers gives no improvement at all (we tested it);
+      the AI had to invent ways to rearrange the points. In our warm-up test (26 circles in a square) it started from scratch and beat Google DeepMind's
+      published AlphaEvolve result, though not the current best.</p></details>
+    <details class="faq"><summary>The improvements look tiny. Do they count?</summary><p>Yes. In this table the competition is at the 6th–12th decimal place,
+      and any verified improvement replaces the old record. Ours are around 0.0000001–0.0000007, more than 100,000 times larger than rounding error.</p></details>
+    <details class="faq"><summary>Why does this problem matter?</summary><p>Spreading points apart on a sphere is the geometry behind telling signals apart:
+      it appears in radio and Wi-Fi signal design, error-correcting codes and data compression. It is also a classic open problem with a long history.</p></details>
+    <details class="faq"><summary>What did the humans do?</summary><p>We built the lab: the sandbox, the checker, the pictures and the loop that connects the models.
+      The methods that broke the records were written by Muse Spark, guided by Muse Wonder.</p></details>
+    <details class="faq"><summary>Can it work on other problems?</summary><p>Yes. A new problem needs only three pieces: a description, a checker and a picture.
+      The same lab ran circle packing and sphere arrangements without changing the engine.</p></details>
   </section>
 
   <footer>Built for the Meta Global AI Developer Hackathon with Muse Spark and Muse Wonder.
