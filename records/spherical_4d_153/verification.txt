@@ -1,0 +1,3 @@
+shape (153, 4) max cosine (50 digits): 0.84910225094991993668 at pair (90, 126)
+improvement over record: 1.0733e-7
+min angle (deg): 31.885840897382
