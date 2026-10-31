@@ -1,4 +1,4 @@
-# Muse Discovery
+# Uncharted
 
 An AI research lab built on Meta's Muse models that hunts for new world records on open mathematical problems.
 
