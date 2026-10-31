@@ -10,13 +10,24 @@
   <header class="hero">
     <div class="brand">UNCHARTED</div>
     <h1>Meta's Muse models, hunting for new world records in mathematics.</h1>
-    <p class="sub">Muse Spark writes solver programs and looks at a picture of every result. Muse Wonder runs the lab as principal investigator.
-      An exact verifier decides what counts. Every record below beats the published table and is checked to 50 digits.</p>
+    <p class="sub">An AI research team writes programs, looks at pictures of its own results, and keeps improving until it beats the best answer humans have published.</p>
     <div class="stats" id="stats"></div>
+    <button class="primary big" id="watchBtn">▶ Watch a record being broken</button>
   </header>
 
+  <section class="explain">
+    <h2>What problem is this?</h2>
+    <div class="explain-grid">
+      <p><b>Spread points as far apart as possible on a sphere.</b> With a few points it's easy. With 150+ points in four dimensions,
+        nobody knows the best arrangement. Mathematicians keep a public table of the best known answers.</p>
+      <p><b>Why it matters.</b> The same maths decides how well signals can be told apart in radio, Wi-Fi and error-correcting codes.</p>
+      <p><b>How we score.</b> We measure how close the two nearest points are (the "largest cosine"). <b>Lower is better.</b>
+        Every result is checked independently to 50 digits.</p>
+    </div>
+  </section>
+
   <section class="records-wrap">
-    <h2>Records broken</h2>
+    <h2>Records broken by the AI</h2>
     <div class="records" id="records"></div>
   </section>
 
@@ -33,6 +44,8 @@
         <span class="live" id="liveBadge" hidden>LIVE</span>
       </div>
     </div>
+    <p class="hint">Each card is one attempt. <span class="chip spark">Muse Spark</span> writes a program,
+      <span class="chip wonder">Muse Wonder</span> steps in to change strategy, and a gold card marks the moment the record falls. Click any card for details.</p>
     <input type="range" id="scrubber" min="0" max="0" value="0" aria-label="Replay position">
     <div class="run-title" id="runTitle"></div>
 
@@ -40,7 +53,7 @@
       <div class="feed" id="feed"></div>
       <aside class="side">
         <div class="panel">
-          <div class="panel-title">Score vs the published record</div>
+          <div class="panel-title">Progress toward the record <span class="muted">(below the gold line = new record)</span></div>
           <canvas id="chart" width="560" height="300"></canvas>
           <div class="legend"><span class="dot pt"></span>program <span class="dot best"></span>lab best <span class="dash"></span>published record</div>
         </div>
@@ -57,7 +70,7 @@
     <h2>How it works</h2>
     <div class="steps">
       <div class="step"><b>1 · Muse Spark writes code</b><p>Eight workers each take a parent program, its picture and the lab's strategy, and write a new solver.</p></div>
-      <div class="step"><b>2 · Sandbox and verifier</b><p>Each program runs isolated, with no credentials and a hard time limit. A strict verifier scores the output.</p></div>
+      <div class="step"><b>2 · Safe testing</b><p>Each program runs in an isolated sandbox with a time limit, and a strict checker scores the answer.</p></div>
       <div class="step"><b>3 · Pictures, not just numbers</b><p>Every result is rendered (contact graphs, slack profiles, packings), and workers study the picture before writing the next program.</p></div>
       <div class="step"><b>4 · Muse Wonder leads</b><p>Every few rounds the principal investigator reads the top programs and the best picture, diagnoses the stall and assigns new directions.</p></div>
     </div>

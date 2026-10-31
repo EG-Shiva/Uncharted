@@ -41,6 +41,14 @@ function fmtBehind(run, score) {
 }
 
 const isRecordRun = (r) => r.record_program != null;
+
+function friendlyTitle(r) {
+  const sc = /spherical_code_(\d+)d_(\d+)/.exec(r.problem || "");
+  if (sc) return `${sc[2]} points on a sphere in ${sc[1]} dimensions`;
+  const cp = /circle_packing_(\d+)/.exec(r.problem || "");
+  if (cp) return `${cp[1]} circles in a square (warm-up test)`;
+  return r.title;
+}
 const dataUrl = (run, rel) => `data/${encodeURIComponent(run)}/${rel}`;
 
 async function loadIndex() {
@@ -50,7 +58,7 @@ async function loadIndex() {
   renderRecords();
   const sel = $("runSelect");
   const ordered = [...state.index].sort((a, b) => (isRecordRun(b) - isRecordRun(a)) || (b.started - a.started));
-  sel.innerHTML = ordered.map((r) => `<option value="${esc(r.name)}">${isRecordRun(r) ? "★ " : ""}${esc(r.title)} (${esc(r.name)})</option>`).join("");
+  sel.innerHTML = ordered.map((r) => `<option value="${esc(r.name)}">${isRecordRun(r) ? "★ New record: " : ""}${esc(friendlyTitle(r))}</option>`).join("");
   const wanted = new URLSearchParams(location.search).get("run");
   const first = ordered.find((r) => r.name === wanted) || ordered[0];
   if (first) { sel.value = first.name; await selectRun(first.name); }
@@ -60,12 +68,10 @@ function renderStats() {
   const runs = state.index;
   const records = runs.filter(isRecordRun).length;
   const programs = runs.reduce((s, r) => s + r.programs, 0);
-  const cost = runs.reduce((s, r) => s + r.cost, 0);
   $("stats").innerHTML = [
-    [records, "verified new world records"],
-    [programs.toLocaleString(), "programs written by Muse Spark"],
-    [`$${cost.toFixed(2)}`, "total model cost"],
-    [runs.length, "research runs"],
+    [records, "new world records"],
+    [programs.toLocaleString(), "programs written by the AI"],
+    ["50 digits", "precision of every check"],
   ].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join("");
 }
 
@@ -74,11 +80,11 @@ function renderRecords() {
   $("records").innerHTML = recs.map((r) => `
     <div class="record" data-run="${esc(r.name)}">
       <div class="tag">NEW WORLD RECORD · VERIFIED</div>
-      <h3>${esc(r.title)}</h3>
+      <h3>${esc(friendlyTitle(r))}</h3>
       <div class="row"><span>Published record</span><span>${r.best_known.toFixed(12)}</span></div>
       <div class="row"><span>Found by Muse</span><span class="new">${r.best_score.toFixed(12)}</span></div>
       <div class="row"><span>Improvement</span><span class="new">${Math.abs(r.gap_to_record).toExponential(2)}</span></div>
-      <div class="row"><span>Programs · cost</span><span>${r.programs} · $${r.cost.toFixed(2)}</span></div>
+      <div class="row"><span>Attempts</span><span>${r.programs} programs</span></div>
       <div class="cta">Replay the discovery →</div>
     </div>`).join("") || `<div class="muted">No records yet.</div>`;
   document.querySelectorAll(".record").forEach((el) => el.addEventListener("click", async () => {
@@ -112,8 +118,7 @@ async function selectRun(name) {
   $("recordBtn").hidden = state.recordPos < 0;
   $("liveBadge").hidden = state.run.finished;
   const r = state.run;
-  $("runTitle").innerHTML = `${esc(r.title)} · workers: ${modelName(r.worker_model)} · lead: ${modelName(r.lead_model)} · published record ${r.best_known ?? "?"}`
-    + (r.best_known_source ? ` <span class="muted">(${esc(r.best_known_source)})</span>` : "");
+  $("runTitle").textContent = `${friendlyTitle(r)} · best answer published before: ${r.best_known ?? "unknown"} (lower is better)`;
   seek(0);
   if (!r.finished) state.pollTimer = setInterval(poll, 4000);
 }
@@ -203,7 +208,7 @@ function apply(ev, animate) {
       ? `<div class="saw"><img loading="lazy" src="${dataUrl(run.name, parent.image)}" alt="Picture the worker studied"><div><b>What it saw:</b> ${prose(ev.picture)}</div></div>` : "";
     const result = ev.valid
       ? `score ${Number(ev.score).toFixed(12)} · ${fmtBehind(run, ev.score)}`
-      : `<span class="bad">rejected: ${esc((ev.message || "").split("\n").filter(Boolean).pop() || "failed")}</span>`;
+      : `<span class="bad">didn't pass the checker</span>`;
     addCard(`
       <div class="meta"><span class="chip ${ev.parent == null ? "dir" : "spark"}">${modelName(prog.model)}</span>program #${ev.id}${ev.parent != null ? ` · built on #${ev.parent}` : ""} ${dir}</div>
       <div class="idea">${prose(prog.idea || ev.idea)}</div>${saw}
@@ -228,10 +233,8 @@ function apply(ev, animate) {
   } else if (ev.type === "strategy") {
     addCard(`<div class="meta"><span class="chip wonder">Muse Wonder</span>principal investigator · new research directions: ${ev.directions}</div>
       <div class="diag">${prose(ev.diagnosis)}</div>`, "wonder", null);
-  } else if (ev.type === "no_code") {
-    addCard(`A Muse Spark worker answered without a program; discarded.`, "note", null);
   } else if (ev.type === "finished" || ev.type === "budget_stop") {
-    addCard(`Run finished · ${ev.programs ?? ""} programs · total cost $${Number(ev.cost_total ?? state.run.cost).toFixed(2)}`, "note", null);
+    addCard(`Research session complete · ${ev.programs ?? state.run.programs} programs written`, "note", null);
   }
 }
 
@@ -293,16 +296,25 @@ function openProgram(id) {
   const metrics = Object.entries(p.metrics || {}).map(([k, v]) => `${esc(k)}: ${esc(typeof v === "number" ? +v.toPrecision(12) : v)}`).join(" · ");
   $("modalBody").innerHTML = `
     <div class="meta"><span class="chip spark">${modelName(p.model)}</span> program #${p.id}${p.parent_id != null ? ` · built on #${p.parent_id}` : ""} · generation ${p.generation}</div>
-    <h3>${esc(p.idea)}</h3>
-    ${p.direction ? `<p><b>Direction from Muse Wonder:</b> ${esc(p.direction)}</p>` : ""}
-    <p class="result">${p.valid ? `score ${p.score} · ${fmtBehind(run, p.score)}` : "rejected by the verifier"}</p>
-    ${metrics ? `<p class="muted">${metrics}</p>` : ""}
+    <h3>${prose(p.idea)}</h3>
+    ${p.direction ? `<p><b>Direction from Muse Wonder:</b> ${prose(p.direction)}</p>` : ""}
+    <p class="result">${p.valid ? `score ${p.score} · ${fmtBehind(run, p.score)}` : "didn't pass the checker"}</p>
     ${p.image ? `<img src="${dataUrl(run.name, p.image)}" alt="Solution picture">` : ""}
-    <p class="muted">Program written by the model (runs in a sandbox, scored by the verifier):</p>
-    <pre><code>${esc(p.code)}</code></pre>`;
+    <details><summary>Show the program the AI wrote</summary>
+      ${metrics ? `<p class="muted">${metrics}</p>` : ""}
+      <pre><code>${esc(p.code)}</code></pre>
+    </details>`;
   $("modal").showModal();
 }
 
+$("watchBtn").addEventListener("click", async () => {
+  const best = state.index.filter(isRecordRun).sort((a, b) => (a.gap_to_record ?? 0) - (b.gap_to_record ?? 0))[0];
+  if (!best) return;
+  $("runSelect").value = best.name;
+  await selectRun(best.name);
+  $("lab").scrollIntoView({ behavior: "smooth" });
+  play();
+});
 $("playBtn").addEventListener("click", () => (state.playing ? pause() : play()));
 $("runSelect").addEventListener("change", (e) => selectRun(e.target.value));
 $("scrubber").addEventListener("input", (e) => { pause(); seek(+e.target.value); });

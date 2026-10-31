@@ -17,7 +17,12 @@ h2 { font-size: 20px; margin: 0 0 14px; }
 .stat b { display: block; font-size: 24px; }
 .stat span { color: var(--muted); font-size: 13px; }
 
-.records-wrap, .lab, .how { padding: 18px 6vw 30px; }
+.records-wrap, .lab, .how, .explain { padding: 18px 6vw 30px; }
+button.big { margin-top: 24px; font-size: 17px; padding: 12px 24px; border-radius: 10px; }
+.explain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.explain-grid p { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin: 0; color: #c9d1de; }
+.hint { color: var(--muted); font-size: 14px; margin: 10px 0 0; }
+details summary { cursor: pointer; color: var(--spark); margin: 10px 0; }
 .records { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
 .record { background: linear-gradient(160deg, #2a2210 0%, var(--panel) 55%); border: 1px solid #5a4a1c; border-radius: 14px; padding: 16px; cursor: pointer; transition: transform .15s; }
 .record:hover { transform: translateY(-2px); }
