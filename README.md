@@ -10,7 +10,9 @@ An AI research lab built on Meta's Muse models that hunts for new world records 
 
 | Problem | Published record | Ours | Status |
 |---|---|---|---|
-| Spherical code, 168 points in 4D (max cosine, lower is better) | 0.859313315478 ([spherical-codes.org](https://spherical-codes.org/)) | **0.859313146285** | New record, verified at 50 digits |
+| Spherical code, 153 points in 4D (max cosine, lower is better) | 0.849102358280 ([spherical-codes.org](https://spherical-codes.org/)) | **0.849102250950** | New record, verified at 50 digits |
+| Spherical code, 163 points in 4D | 0.856415430312 | **0.856414859773** | New record, verified at 50 digits |
+| Spherical code, 168 points in 4D | 0.859313315478 | **0.859313146285** | New record, verified at 50 digits |
 | 26 circles in a square (sum of radii, higher is better) | 2.6359830849 | 2.6359404147 | Beats AlphaEvolve's 2.635863 |
 
 Evidence for each record (coordinates, the AI-written program, picture, verification) is in [`records/`](records/).
