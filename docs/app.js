@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const RECORD_EPS = 1e-9;
+const NORMAL_MS = 1600;
 const TEX = { "\\times": "×", "\\cdot": "·", "\\sim": "~", "\\approx": "≈", "\\le": "≤", "\\ge": "≥", "\\leq": "≤", "\\geq": "≥",
   "\\ne": "≠", "\\to": "→", "\\pm": "±", "\\infty": "∞", "\\langle": "⟨", "\\rangle": "⟩", "\\pi": "π", "\\theta": "θ", "\\epsilon": "ε",
   "\\varepsilon": "ε", "\\delta": "δ", "\\lambda": "λ", "\\mathrm": "", "\\text": "", "\\,": " ", "\\;": " ", "--": "–" };
@@ -14,12 +15,23 @@ function prose(s) {
 }
 
 const state = {
-  index: [], run: null, events: [], programs: new Map(), pos: 0, playing: false, speed: 4, timer: null,
-  points: [], bestLine: [], best: null, recordPos: -1, pollTimer: null,
+  index: [], run: null, events: [], programs: new Map(), pos: 0, playing: false, delay: 450, timer: null,
+  points: [], bestLine: [], recordPos: -1, pollTimer: null, director: false, attemptsTotal: 0, attempts: 0,
 };
 
+const isRecordRun = (r) => r.record_program != null;
+const dataUrl = (run, rel) => `data/${encodeURIComponent(run)}/${rel}`;
+
+function friendlyTitle(r) {
+  const sc = /spherical_code_(\d+)d_(\d+)/.exec(r.problem || "");
+  if (sc) return `${sc[2]} points on a sphere in ${sc[1]} dimensions`;
+  const cp = /circle_packing_(\d+)/.exec(r.problem || "");
+  if (cp) return `${cp[1]} circles in a square (warm-up test)`;
+  return r.title;
+}
+
 function modelName(m) {
-  if (!m || m === "seed") return "Seed";
+  if (!m || m === "seed") return "Starting point";
   if (m.startsWith("muse-wonder")) return "Muse Wonder";
   if (m.startsWith("muse-spark")) return "Muse Spark";
   return m;
@@ -31,25 +43,21 @@ function behind(run, score) {
   return run.maximize ? run.best_known - score : score - run.best_known;
 }
 
-function fmtBehind(run, score) {
+function plain(x) {
+  const a = Math.abs(x);
+  if (a === 0) return "0";
+  if (a >= 0.01) return a.toFixed(4);
+  return a.toFixed(Math.min(14, Math.ceil(-Math.log10(a)) + 1));
+}
+
+function verdict(run, score) {
   const d = behind(run, score);
-  if (d == null) return "";
+  if (d == null) return { kind: "none", html: "" };
   const tol = RECORD_EPS * Math.max(1, Math.abs(run.best_known));
-  if (d < -tol) return `<span class="goldtxt">beats the record by ${(-d).toExponential(2)}</span>`;
-  if (Math.abs(d) <= tol) return `<span class="muted">ties the record</span>`;
-  return `<span class="muted">${d.toExponential(2)} behind the record</span>`;
+  if (d < -tol) return { kind: "beat", html: `<span class="goldtxt">beats the published record by ${plain(d)}</span>` };
+  if (Math.abs(d) <= tol) return { kind: "tie", html: `<span class="muted">equal to the published record</span>` };
+  return { kind: "behind", html: `<span class="muted">${plain(d)} short of the record</span>` };
 }
-
-const isRecordRun = (r) => r.record_program != null;
-
-function friendlyTitle(r) {
-  const sc = /spherical_code_(\d+)d_(\d+)/.exec(r.problem || "");
-  if (sc) return `${sc[2]} points on a sphere in ${sc[1]} dimensions`;
-  const cp = /circle_packing_(\d+)/.exec(r.problem || "");
-  if (cp) return `${cp[1]} circles in a square (warm-up test)`;
-  return r.title;
-}
-const dataUrl = (run, rel) => `data/${encodeURIComponent(run)}/${rel}`;
 
 async function loadIndex() {
   const res = await fetch("data/index.json", { cache: "no-store" });
@@ -57,8 +65,8 @@ async function loadIndex() {
   renderStats();
   renderRecords();
   const sel = $("runSelect");
-  const ordered = [...state.index].sort((a, b) => (isRecordRun(b) - isRecordRun(a)) || (b.started - a.started));
-  sel.innerHTML = ordered.map((r) => `<option value="${esc(r.name)}">${isRecordRun(r) ? "★ New record: " : ""}${esc(friendlyTitle(r))}</option>`).join("");
+  const ordered = [...state.index].sort((a, b) => (isRecordRun(b) - isRecordRun(a)) || ((a.gap_to_record ?? 0) - (b.gap_to_record ?? 0)));
+  sel.innerHTML = ordered.map((r) => `<option value="${esc(r.name)}">${isRecordRun(r) ? "★ Record: " : ""}${esc(friendlyTitle(r))}</option>`).join("");
   const wanted = new URLSearchParams(location.search).get("run");
   const first = ordered.find((r) => r.name === wanted) || ordered[0];
   if (first) { sel.value = first.name; await selectRun(first.name); }
@@ -68,6 +76,7 @@ function renderStats() {
   const runs = state.index;
   const records = runs.filter(isRecordRun).length;
   const programs = runs.reduce((s, r) => s + r.programs, 0);
+  $("recCount").textContent = records;
   $("stats").innerHTML = [
     [records, "new world records"],
     [programs.toLocaleString(), "programs written by the AI"],
@@ -81,18 +90,12 @@ function renderRecords() {
     <div class="record" data-run="${esc(r.name)}">
       <div class="tag">NEW WORLD RECORD · VERIFIED</div>
       <h3>${esc(friendlyTitle(r))}</h3>
-      <div class="row"><span>Published record</span><span>${r.best_known.toFixed(12)}</span></div>
-      <div class="row"><span>Found by Muse</span><span class="new">${r.best_score.toFixed(12)}</span></div>
-      <div class="row"><span>Improvement</span><span class="new">${Math.abs(r.gap_to_record).toExponential(2)}</span></div>
-      <div class="row"><span>Attempts</span><span>${r.programs} programs</span></div>
-      <div class="cta">Replay the discovery →</div>
+      <div class="row"><span>Best published before</span><span>${r.best_known.toFixed(12)}</span></div>
+      <div class="row"><span>Found by the AI</span><span class="new">${r.best_score.toFixed(12)}</span></div>
+      <div class="row"><span>Better by</span><span class="new">${plain(r.gap_to_record)}</span></div>
+      <div class="cta">▶ Watch how it was found</div>
     </div>`).join("") || `<div class="muted">No records yet.</div>`;
-  document.querySelectorAll(".record").forEach((el) => el.addEventListener("click", async () => {
-    $("runSelect").value = el.dataset.run;
-    await selectRun(el.dataset.run);
-    $("lab").scrollIntoView({ behavior: "smooth" });
-    play();
-  }));
+  document.querySelectorAll(".record").forEach((el) => el.addEventListener("click", () => watch(el.dataset.run)));
 }
 
 function parseEvents(text) {
@@ -107,20 +110,31 @@ async function fetchRunData(name) {
   return { events: parseEvents(evText), programs: new Map(progs.map((p) => [p.id, p])) };
 }
 
+function narrate(kind, label, text, sub = "") {
+  $("narrator").className = `narrator k-${kind}`;
+  $("narrKind").textContent = label;
+  $("narrText").innerHTML = text;
+  $("narrSub").innerHTML = sub;
+}
+
 async function selectRun(name) {
   pause();
   clearInterval(state.pollTimer);
   state.run = state.index.find((r) => r.name === name);
+  $("runSelect").value = name;
+  $("feed").innerHTML = `<div class="empty">Loading this research session…</div>`;
+  narrate("spark", "Loading", "Loading the research session…");
   const { events, programs } = await fetchRunData(name);
   state.events = events;
   state.programs = programs;
+  state.attemptsTotal = events.filter((e) => e.type === "candidate").length;
   state.recordPos = events.findIndex((e) => e.type === "new_best" && e.id === state.run.record_program);
   $("recordBtn").hidden = state.recordPos < 0;
   $("liveBadge").hidden = state.run.finished;
-  const r = state.run;
-  $("runTitle").textContent = `${friendlyTitle(r)} · best answer published before: ${r.best_known ?? "unknown"} (lower is better)`;
   seek(0);
-  if (!r.finished) state.pollTimer = setInterval(poll, 4000);
+  narrate("spark", "Ready", `${esc(friendlyTitle(state.run))}`,
+    `The best answer ever published is <b>${state.run.best_known}</b> (lower is better). Press Play to watch the AI try to beat it.`);
+  if (!state.run.finished) state.pollTimer = setInterval(poll, 4000);
 }
 
 async function poll() {
@@ -128,6 +142,7 @@ async function poll() {
   state.programs = programs;
   if (events.length > state.events.length) {
     state.events = events;
+    state.attemptsTotal = events.filter((e) => e.type === "candidate").length;
     $("scrubber").max = events.length;
     if (state.playing && !state.timer) schedule();
   }
@@ -141,42 +156,64 @@ function resetView() {
   $("feed").innerHTML = "";
   state.points = [];
   state.bestLine = [];
-  state.best = null;
+  state.attempts = 0;
   $("bestImg").removeAttribute("src");
-  $("bestNums").innerHTML = "";
-  $("bestLabel").textContent = "";
 }
 
 function seek(target) {
   resetView();
   state.pos = 0;
   while (state.pos < Math.min(target, state.events.length)) apply(state.events[state.pos++], false);
-  $("scrubber").max = state.events.length;
-  $("scrubber").value = state.pos;
+  if (!$("feed").children.length) $("feed").innerHTML = `<div class="empty">Attempts will appear here as the replay plays.</div>`;
+  updateProgress();
   drawChart();
 }
 
+function updateProgress() {
+  const total = Math.max(1, state.attemptsTotal);
+  $("progFill").style.width = `${(100 * state.attempts) / total}%`;
+  $("progText").textContent = `Attempt ${state.attempts} of ${state.attemptsTotal}`;
+  const best = state.bestLine.at(-1);
+  if (!best) $("statusText").textContent = "";
+  else if (best.y < -RECORD_EPS * Math.max(1, Math.abs(state.run.best_known))) $("statusText").innerHTML = `<b>Record broken · better by ${plain(best.y)}</b>`;
+  else if (Math.abs(best.y) <= RECORD_EPS) $("statusText").textContent = "Best so far: equal to the published record";
+  else $("statusText").textContent = `Best so far: ${plain(best.y)} short of the record`;
+  $("scrubber").max = state.events.length;
+  $("scrubber").value = state.pos;
+}
+
 function step() {
+  state.timer = null;
   if (state.pos >= state.events.length) {
-    state.timer = null;
-    if (state.run.finished) pause();
+    if (state.run.finished) {
+      pause();
+      narrate("best", "Finished", "That's the whole research session.",
+        state.run.record_program != null ? "The record found here was verified independently to 50 digits." : "");
+    }
     return;
   }
-  apply(state.events[state.pos++], true);
-  $("scrubber").value = state.pos;
+  if (state.director && state.recordPos >= 0 && state.pos >= state.recordPos - 4 && state.delay < NORMAL_MS) state.delay = NORMAL_MS;
+  const ev = state.events[state.pos++];
+  apply(ev, true);
+  updateProgress();
   drawChart();
+  if (state.director && ev.type === "new_best" && ev.id === state.run.record_program) {
+    pause();
+    celebrate(ev);
+    return;
+  }
   schedule();
 }
 
 function schedule() {
-  state.timer = setTimeout(step, 1100 / state.speed);
+  clearTimeout(state.timer);
+  state.timer = setTimeout(step, state.delay);
 }
 
 function play() {
   if (state.pos >= state.events.length && state.run.finished) seek(0);
   state.playing = true;
-  $("playBtn").textContent = "Pause";
-  clearTimeout(state.timer);
+  $("playBtn").textContent = "❚❚ Pause";
   schedule();
 }
 
@@ -184,10 +221,20 @@ function pause() {
   state.playing = false;
   clearTimeout(state.timer);
   state.timer = null;
-  $("playBtn").textContent = "Play";
+  $("playBtn").textContent = "▶ Play";
+}
+
+async function watch(name) {
+  await selectRun(name);
+  $("lab").scrollIntoView({ behavior: "smooth" });
+  state.director = true;
+  state.delay = 650;
+  play();
 }
 
 function addCard(html, cls, onClick) {
+  const empty = $("feed").querySelector(".empty");
+  if (empty) empty.remove();
   const el = document.createElement("div");
   el.className = `card ${cls}`;
   el.innerHTML = html;
@@ -199,86 +246,107 @@ function addCard(html, cls, onClick) {
 function apply(ev, animate) {
   const run = state.run;
   if (ev.type === "candidate") {
+    state.attempts++;
     const prog = state.programs.get(ev.id) || {};
     const parent = ev.parent != null ? state.programs.get(ev.parent) : null;
-    if (ev.valid) state.points.push({ x: state.points.length, y: behind(run, ev.score) });
-    else state.points.push({ x: state.points.length, y: null });
-    const dir = prog.direction ? `<span class="chip dir" title="${esc(prog.direction)}">following Muse Wonder's direction</span>` : "";
-    const saw = ev.picture && ev.picture.toLowerCase() !== "none" && parent?.image
-      ? `<div class="saw"><img loading="lazy" src="${dataUrl(run.name, parent.image)}" alt="Picture the worker studied"><div><b>What it saw:</b> ${prose(ev.picture)}</div></div>` : "";
-    const result = ev.valid
-      ? `score ${Number(ev.score).toFixed(12)} · ${fmtBehind(run, ev.score)}`
-      : `<span class="bad">didn't pass the checker</span>`;
+    state.points.push({ x: state.points.length, y: ev.valid ? behind(run, ev.score) : null });
+    const isSeed = ev.parent == null;
+    const v = ev.valid ? verdict(run, ev.score) : { kind: "bad" };
+    const thumb = parent && (parent.thumb || parent.image);
+    const saw = ev.picture && ev.picture.toLowerCase() !== "none" && thumb
+      ? `<div class="saw"><img loading="lazy" src="${dataUrl(run.name, thumb)}" alt="Picture the AI studied"><div><b>What the AI noticed in the picture:</b> ${prose(ev.picture)}</div></div>` : "";
+    const dir = prog.direction ? `<span class="chip dir">following Muse Wonder's plan</span>` : "";
+    const result = ev.valid ? `Result: ${v.html}` : `<span class="bad">The checker rejected this attempt.</span>`;
     addCard(`
-      <div class="meta"><span class="chip ${ev.parent == null ? "dir" : "spark"}">${modelName(prog.model)}</span>program #${ev.id}${ev.parent != null ? ` · built on #${ev.parent}` : ""} ${dir}</div>
-      <div class="idea">${prose(prog.idea || ev.idea)}</div>${saw}
+      <div class="meta"><span class="chip ${isSeed ? "dir" : "spark"}">${modelName(prog.model)}</span>Attempt #${ev.id} ${dir}</div>
+      <div class="idea">${isSeed ? "Starting point: the best arrangement published so far." : prose(prog.idea || ev.idea)}</div>${saw}
       <div class="result">${result}</div>`, ev.valid ? "" : "invalid", () => openProgram(ev.id));
+    if (animate) {
+      if (isSeed) narrate("spark", "Starting point", "The AI starts from the best answer mathematicians have published.", `Score to beat: <b>${run.best_known}</b>`);
+      else if (!ev.valid) narrate("bad", `Attempt ${state.attempts} · Muse Spark`, "Tried a new idea, but the checker rejected the answer.", prose(prog.idea || ev.idea));
+      else narrate("spark", `Attempt ${state.attempts} · Muse Spark`, `Tried a new idea. Result: ${v.html}.`, prose(prog.idea || ev.idea));
+    }
   } else if (ev.type === "new_best") {
-    state.best = ev;
     state.bestLine.push({ x: state.points.length - 1, y: behind(run, ev.score) });
     const prog = state.programs.get(ev.id);
     const top = $("feed").firstElementChild;
     if (top) top.classList.add("best");
     if (prog?.image) $("bestImg").src = dataUrl(run.name, prog.image);
-    $("bestLabel").textContent = `· program #${ev.id}`;
-    $("bestNums").innerHTML = `<span>Score</span><span>${Number(ev.score).toFixed(13)}</span>`
-      + `<span>Published</span><span>${run.best_known}</span><span>Status</span><span>${fmtBehind(run, ev.score)}</span>`;
     if (ev.id === run.record_program) {
-      const el = addCard(`<div class="meta"><span class="chip wonder">verified</span>program #${ev.id}</div>
+      const el = addCard(`<div class="meta"><span class="chip wonder">verified</span>Attempt #${ev.id}</div>
         <h3>NEW WORLD RECORD</h3>
-        <div>Beats the published value ${run.best_known} by ${(-behind(run, ev.score)).toExponential(2)}. The lab keeps pushing after this.</div>
-        <div class="idea muted">${esc(prog?.idea || ev.idea)}</div>`, "recordcard", () => openProgram(ev.id));
-      if (animate) { el.classList.add("flash"); $("bestImg").classList.add("flash"); setTimeout(() => $("bestImg").classList.remove("flash"), 1700); }
+        <div>Better than the best published answer (${run.best_known}) by ${plain(behind(run, ev.score))}. The team keeps improving after this.</div>`,
+        "recordcard", () => openProgram(ev.id));
+      if (animate) {
+        el.classList.add("flash");
+        narrate("record", "New world record", `Attempt #${ev.id} beat the best answer ever published.`,
+          `${run.best_known} → <b class="goldtxt">${Number(ev.score).toFixed(12)}</b> (lower is better)`);
+      }
+    } else if (animate && ev.id !== 0) {
+      narrate("best", "New best for the team", `Attempt #${ev.id} is the team's best answer so far.`, verdict(run, ev.score).html);
     }
   } else if (ev.type === "strategy") {
-    addCard(`<div class="meta"><span class="chip wonder">Muse Wonder</span>principal investigator · new research directions: ${ev.directions}</div>
+    addCard(`<div class="meta"><span class="chip wonder">Muse Wonder</span>the lead AI reviewed all attempts and set a new plan</div>
       <div class="diag">${prose(ev.diagnosis)}</div>`, "wonder", null);
+    if (animate) narrate("wonder", "Muse Wonder · lead AI", "Reviewed every attempt so far and gave the team a new plan.",
+      prose((ev.diagnosis || "").split(/(?<=\.)\s/)[0]));
   } else if (ev.type === "finished" || ev.type === "budget_stop") {
-    addCard(`Research session complete · ${ev.programs ?? state.run.programs} programs written`, "note", null);
+    addCard(`Research session complete · ${state.attemptsTotal} attempts`, "note", null);
   }
+}
+
+function celebrate(ev) {
+  const run = state.run;
+  const prog = state.programs.get(ev.id) || {};
+  $("celebrateBody").innerHTML = `
+    <div class="trophy">NEW WORLD RECORD</div>
+    <h2>${esc(friendlyTitle(run))}</h2>
+    <p>After ${state.attempts} attempts, the AI found an arrangement better than the best one ever published.</p>
+    <div class="compare">
+      <div><span>Best published answer</span><b>${run.best_known.toFixed(12)}</b></div>
+      <div class="ours"><span>Found by the AI (lower is better)</span><b>${Number(ev.score).toFixed(12)}</b></div>
+    </div>
+    <p class="muted">Idea that worked: ${prose(prog.idea || ev.idea)}</p>
+    <p>The team kept improving afterwards. Its final answer, <b class="goldtxt">${Number(run.best_score).toFixed(12)}</b>,
+      was checked independently with 50-digit arithmetic. Coordinates and verification files are in the public repository.</p>`;
+  $("celebrate").showModal();
 }
 
 function drawChart() {
   const cv = $("chart"), ctx = cv.getContext("2d");
-  const W = cv.width, H = cv.height, padL = 64, padR = 12, padT = 12, padB = 26;
+  const W = cv.width, H = cv.height, padL = 78, padR = 12, padT = 14, padB = 26;
   ctx.clearRect(0, 0, W, H);
   const pts = state.points.filter((p) => p.y != null);
-  const n = Math.max(state.events.filter((e) => e.type === "candidate").length, 10);
-  const bestYs = state.bestLine.map((p) => p.y);
-  const lo = Math.min(0, ...bestYs);
+  const n = Math.max(state.attemptsTotal, 10);
+  const lo = Math.min(0, ...state.bestLine.map((p) => p.y));
   const sorted = pts.map((p) => p.y).sort((a, b) => a - b);
   const median = sorted.length ? sorted[Math.floor(sorted.length * 0.5)] : 1;
-  const hi = Math.max(median, Math.abs(lo) * 2.5, 1e-12);
-  const yMin = lo - (hi - lo) * 0.08, yMax = hi;
+  const hi = Math.max(median, Math.abs(lo) * 2.5, 1e-7);
+  const yMin = lo - (hi - lo) * 0.1, yMax = hi;
   const X = (x) => padL + (x / Math.max(1, n - 1)) * (W - padL - padR);
   const Y = (y) => padT + (1 - (Math.min(y, yMax) - yMin) / (yMax - yMin)) * (H - padT - padB);
 
-  ctx.font = "11px Consolas, monospace";
+  ctx.font = "12px Segoe UI, sans-serif";
   ctx.fillStyle = "#8b95a7";
-  ctx.strokeStyle = "#232a37";
-  for (let i = 0; i <= 4; i++) {
-    const v = yMin + (yMax - yMin) * (i / 4);
-    const y = Y(v);
-    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
-    ctx.fillText(v === 0 ? "0" : v.toExponential(1), 4, y + 4);
-  }
-  ctx.fillText("behind record ↑   ahead ↓", padL, H - 8);
-
+  ctx.fillText("worse", 6, padT + 10);
+  ctx.fillText("better", 6, H - padB);
+  ctx.fillText("attempts →", W - 80, H - 6);
   ctx.setLineDash([6, 5]);
   ctx.strokeStyle = "#f5c542";
   ctx.beginPath(); ctx.moveTo(padL, Y(0)); ctx.lineTo(W - padR, Y(0)); ctx.stroke();
   ctx.setLineDash([]);
+  ctx.fillStyle = "#f5c542";
+  ctx.fillText("published record", 6, Y(0) + 4);
 
   for (const p of pts) {
     const clipped = p.y > yMax;
-    ctx.fillStyle = clipped ? "transparent" : (p.y < 0 ? "#f5c542" : "#5b6b8a");
+    ctx.fillStyle = p.y < 0 ? "#f5c542" : "#5b6b8a";
     ctx.strokeStyle = "#5b6b8a";
-    ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 3, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 3.2, 0, Math.PI * 2);
     clipped ? ctx.stroke() : ctx.fill();
   }
-
   if (state.bestLine.length) {
-    ctx.strokeStyle = "#3ddc97"; ctx.lineWidth = 2;
+    ctx.strokeStyle = "#3ddc97"; ctx.lineWidth = 2.5;
     ctx.beginPath();
     state.bestLine.forEach((p, i) => {
       const x = X(Math.max(0, p.x)), y = Y(p.y);
@@ -289,41 +357,50 @@ function drawChart() {
   }
 }
 
-function openProgram(id) {
+async function openProgram(id) {
   const p = state.programs.get(id);
   if (!p) return;
   const run = state.run;
-  const metrics = Object.entries(p.metrics || {}).map(([k, v]) => `${esc(k)}: ${esc(typeof v === "number" ? +v.toPrecision(12) : v)}`).join(" · ");
+  const v = p.valid ? verdict(run, p.score) : null;
   $("modalBody").innerHTML = `
-    <div class="meta"><span class="chip spark">${modelName(p.model)}</span> program #${p.id}${p.parent_id != null ? ` · built on #${p.parent_id}` : ""} · generation ${p.generation}</div>
-    <h3>${prose(p.idea)}</h3>
-    ${p.direction ? `<p><b>Direction from Muse Wonder:</b> ${prose(p.direction)}</p>` : ""}
-    <p class="result">${p.valid ? `score ${p.score} · ${fmtBehind(run, p.score)}` : "didn't pass the checker"}</p>
-    ${p.image ? `<img src="${dataUrl(run.name, p.image)}" alt="Solution picture">` : ""}
-    <details><summary>Show the program the AI wrote</summary>
-      ${metrics ? `<p class="muted">${metrics}</p>` : ""}
-      <pre><code>${esc(p.code)}</code></pre>
-    </details>`;
+    <div class="meta"><span class="chip spark">${modelName(p.model)}</span> Attempt #${p.id}${p.parent_id != null ? ` · improved on attempt #${p.parent_id}` : ""}</div>
+    <h3>${p.parent_id == null ? "Starting point: the best published arrangement" : prose(p.idea)}</h3>
+    ${p.direction ? `<p><b>Plan from Muse Wonder:</b> ${prose(p.direction)}</p>` : ""}
+    <p>${p.valid ? `Score <b>${p.score}</b> · ${v.html}` : "The checker rejected this attempt."}</p>
+    ${p.image ? `<img src="${dataUrl(run.name, p.image)}" alt="Picture of this answer">` : ""}
+    <details id="codeDetails"><summary>Show the program the AI wrote</summary><pre><code id="codeBox">Loading…</code></pre></details>`;
+  $("codeDetails").addEventListener("toggle", async () => {
+    const code = p.code ?? await fetch(dataUrl(run.name, `code/${p.id}.py`)).then((r) => (r.ok ? r.text() : "Code unavailable."));
+    p.code = code;
+    $("codeBox").textContent = code;
+  }, { once: true });
   $("modal").showModal();
 }
 
-$("watchBtn").addEventListener("click", async () => {
+$("watchBtn").addEventListener("click", () => {
   const best = state.index.filter(isRecordRun).sort((a, b) => (a.gap_to_record ?? 0) - (b.gap_to_record ?? 0))[0];
-  if (!best) return;
-  $("runSelect").value = best.name;
-  await selectRun(best.name);
-  $("lab").scrollIntoView({ behavior: "smooth" });
+  if (best) watch(best.name);
+});
+$("playBtn").addEventListener("click", () => {
+  if (state.playing) return pause();
+  state.director = false;
+  state.delay = +$("speedSelect").value;
   play();
 });
-$("playBtn").addEventListener("click", () => (state.playing ? pause() : play()));
+$("speedSelect").addEventListener("change", (e) => { state.delay = +e.target.value; state.director = false; });
 $("runSelect").addEventListener("change", (e) => selectRun(e.target.value));
 $("scrubber").addEventListener("input", (e) => { pause(); seek(+e.target.value); });
-$("recordBtn").addEventListener("click", () => { pause(); seek(state.recordPos + 1); });
-$("speeds").addEventListener("click", (e) => {
-  const s = e.target.dataset.speed;
-  if (!s) return;
-  state.speed = +s;
-  document.querySelectorAll("#speeds button").forEach((b) => b.classList.toggle("on", b === e.target));
+$("recordBtn").addEventListener("click", () => {
+  pause();
+  seek(state.recordPos + 1);
+  celebrate(state.events[state.recordPos]);
 });
+$("keepWatching").addEventListener("click", () => {
+  $("celebrate").close();
+  state.director = false;
+  state.delay = +$("speedSelect").value;
+  play();
+});
+$("closeCelebrate").addEventListener("click", () => $("celebrate").close());
 
 loadIndex();
