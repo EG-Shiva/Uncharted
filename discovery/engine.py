@@ -51,6 +51,9 @@ class DiscoveryEngine:
         self.directions: list[str] = []
         self.best_history: list[str] = []
         self._strategy_lock = threading.Lock()
+        self._render_lock = threading.Lock()
+        best_file = run_dir / "best" / "solution.npy"
+        self.best_output = np.load(best_file) if best_file.exists() else None
         (run_dir / "run.json").write_text(json.dumps({
             "problem": problem.name, "title": problem.title, "best_known": problem.best_known,
             "best_known_source": problem.best_known_source, "maximize": problem.maximize,
@@ -59,7 +62,7 @@ class DiscoveryEngine:
         }, indent=2))
 
     def _evaluate_code(self, code: str):
-        run = run_candidate(code, self.problem.timeout_seconds)
+        run = run_candidate(code, self.problem.timeout_seconds, self.problem.input_files(self.best_output))
         if not run.ok:
             return run, None
         return run, self.problem.evaluate(run.output)
@@ -71,7 +74,8 @@ class DiscoveryEngine:
         image_rel = ""
         if ev is not None:
             image_rel = f"images/{pid:05d}.png"
-            self.problem.render(run.output, ev, self.run_dir / image_rel)
+            with self._render_lock:
+                self.problem.render(run.output, ev, self.run_dir / image_rel)
         prog = Program(
             id=pid, parent_id=parent.id if parent else None, generation=(parent.generation + 1) if parent else 0,
             idea=idea, code=code, valid=bool(ev and ev.valid), score=ev.score if ev else 0.0,
@@ -80,7 +84,7 @@ class DiscoveryEngine:
         )
         prev_best = self.db.best()
         self.db.add(prog)
-        self.events.emit("candidate", id=prog.id, parent=prog.parent_id, valid=prog.valid, score=round(prog.score, 10),
+        self.events.emit("candidate", id=prog.id, parent=prog.parent_id, valid=prog.valid, score=round(prog.score, 13),
                          idea=idea[:160], picture=picture_note[:200], message=prog.message[:160], cost_total=round(self.ledger.total, 4))
         if prog.valid and (prev_best is None or self.problem.better(prog.score, prev_best.score)):
             self._new_best(prog, run.output)
@@ -88,8 +92,9 @@ class DiscoveryEngine:
 
     def _new_best(self, prog: Program, output: np.ndarray):
         gap = self.problem.gap_to_record(prog.score)
-        self.best_history.append(f"after {len(self.db.programs)} programs: {prog.score:.10f}")
+        self.best_history.append(f"after {len(self.db.programs)} programs: {prog.score:.13f}")
         best_dir = self.run_dir / "best"
+        self.best_output = np.array(output, copy=True)
         (best_dir / "program.py").write_text(prog.code, encoding="utf-8")
         np.save(best_dir / "solution.npy", output)
         (best_dir / "solution.json").write_text(json.dumps({
@@ -98,8 +103,8 @@ class DiscoveryEngine:
         }, indent=2))
         if prog.image:
             (best_dir / "image.png").write_bytes((self.run_dir / prog.image).read_bytes())
-        beats = gap is not None and gap < 0
-        self.events.emit("new_best", id=prog.id, score=round(prog.score, 10),
+        beats = gap is not None and gap < -1e-9 * max(1.0, abs(self.problem.best_known))
+        self.events.emit("new_best", id=prog.id, score=round(prog.score, 13),
                          gap_to_record=None if gap is None else float(f"{gap:.3e}"), beats_record=beats, idea=prog.idea[:160])
 
     def _attempt(self, it: int) -> Program | None:

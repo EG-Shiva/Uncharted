@@ -18,24 +18,24 @@ def _clip(code: str, limit: int) -> str:
 
 def worker_prompt(problem: Problem, parent: Program, inspirations: list[Program], failures: list[Program],
                   best_score: float | None, strategy: str, direction: str, has_image: bool) -> str:
-    record = f"{problem.best_known:.10f} ({problem.best_known_source})" if problem.best_known is not None else "unknown"
+    record = f"{problem.best_known:.13f} ({problem.best_known_source})" if problem.best_known is not None else "unknown"
     parts = [
         f"# Problem\n{problem.description()}",
-        f"# Scoreboard\nPublic best-known value: {record}\nOur lab's best so far: {best_score if best_score is not None else 'none yet'}",
+        f"# Scoreboard ({'higher' if problem.maximize else 'LOWER'} is better)\nPublic best-known value: {record}\n"
+        f"Our lab's best so far: {f'{best_score:.13f}' if best_score is not None else 'none yet'}",
     ]
     if strategy:
         parts.append(f"# Research strategy from the principal investigator\n{strategy}")
     if direction:
         parts.append(f"# Your assigned direction for this attempt\n{direction}")
 
-    parent_status = f"score {parent.score:.10f}" if parent.valid else f"INVALID: {parent.message}"
+    parent_status = f"score {parent.score:.13f}" if parent.valid else f"INVALID: {parent.message}"
     parts.append(f"# Parent program (id {parent.id}, {parent_status})\nIdea: {parent.idea or 'seed'}\n```python\n{_clip(parent.code, 12000)}\n```")
     if has_image:
-        parts.append("# Picture of the parent's solution\nThe attached image is the parent's solution drawn to scale. "
-                     "Study it before coding: where is space wasted, which elements are cramped or could grow, what symmetry or structure is missing?")
+        parts.append(f"# Picture of the parent's solution\n{problem.picture_hint}")
 
     for p in inspirations:
-        parts.append(f"# Another strong program (id {p.id}, score {p.score:.10f})\nIdea: {p.idea}\n```python\n{_clip(p.code, 5000)}\n```")
+        parts.append(f"# Another strong program (id {p.id}, score {p.score:.13f})\nIdea: {p.idea}\n```python\n{_clip(p.code, 5000)}\n```")
     if failures:
         lines = "\n".join(f"- idea: {f.idea[:150]} -> {f.message[:200]}" for f in failures)
         parts.append(f"# Recent failed attempts (avoid repeating these mistakes)\n{lines}")
@@ -50,13 +50,13 @@ Make sure the returned solution satisfies every constraint strictly; shrink by a
 
 
 def lead_prompt(problem: Problem, top: list[Program], failures: list[Program], total: int, best_history: list[str]) -> str:
-    record = f"{problem.best_known:.10f}" if problem.best_known is not None else "unknown"
+    record = f"{problem.best_known:.13f}" if problem.best_known is not None else "unknown"
     parts = [
         f"# Problem\n{problem.description()}",
         f"# Status\nPublic best-known: {record}. Programs evaluated so far: {total}.\nProgress of our best score over time:\n" + "\n".join(best_history[-15:]),
     ]
     for p in top:
-        parts.append(f"## Top program id {p.id}: score {p.score:.10f}\nIdea: {p.idea}\n```python\n{_clip(p.code, 6000)}\n```")
+        parts.append(f"## Top program id {p.id}: score {p.score:.13f}\nIdea: {p.idea}\n```python\n{_clip(p.code, 6000)}\n```")
     if failures:
         parts.append("## Recent failures\n" + "\n".join(f"- {f.idea[:150]} -> {f.message[:150]}" for f in failures))
     parts.append("""The attached image shows our current best solution.

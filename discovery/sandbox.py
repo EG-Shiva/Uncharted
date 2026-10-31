@@ -32,11 +32,13 @@ def _child_env() -> dict:
     return env
 
 
-def run_candidate(code: str, timeout: float) -> RunResult:
+def run_candidate(code: str, timeout: float, files: dict[str, np.ndarray] | None = None) -> RunResult:
     """Run untrusted candidate code in a separate process with no API credentials and a hard timeout."""
     with tempfile.TemporaryDirectory(prefix="cand_") as tmp:
         tmp_path = Path(tmp)
         (tmp_path / "harness.py").write_text(HARNESS)
+        for name, arr in (files or {}).items():
+            np.save(tmp_path / name, arr, allow_pickle=False)
         (tmp_path / "candidate.py").write_text(code, encoding="utf-8")
         out_file = tmp_path / "out.npy"
         start = time.time()
