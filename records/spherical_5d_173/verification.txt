@@ -1,0 +1,4 @@
+shape (173, 5) max cosine (50 digits): 0.75856124959403840982 at pair (36, 67)
+improvement over record: 4.38811e-7
+min angle (deg): 40.6624755201138
+found by run: hunt_5d_173 (pictures on)
