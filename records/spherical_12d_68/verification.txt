@@ -1,0 +1,4 @@
+shape (68, 12) max cosine (50 digits): 0.21996083386270765151 at pair (24, 32)
+improvement over record: 1.8001e-5
+min angle (deg): 77.293267410015
+found by run: hunt_12d_68 (pictures on)
