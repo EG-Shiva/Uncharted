@@ -13,6 +13,9 @@ An AI research lab built on Meta's Muse models that hunts for new world records 
 | Spherical code, 68 points in 12D (max cosine, lower is better) | 0.219978834878 ([spherical-codes.org](https://spherical-codes.org/)) | **0.219960833863** | New record, verified at 50 digits |
 | Spherical code, 71 points in 12D | 0.230211592242 | **0.230137617429** | New record, verified at 50 digits |
 | Spherical code, 173 points in 5D | 0.758561688405 | **0.758561249594** | New record, verified at 50 digits |
+| Spherical code, 73 points in 13D | 0.207434422294 | **0.207335886427** | New record, verified at 50 digits |
+| Spherical code, 54 points in 23D | 0.047607916868 | **0.047607601413** | New record, verified at 50 digits |
+| Spherical code, 74 points in 13D | 0.208757494799 | **0.208757209355** | New record, verified at 50 digits |
 | Spherical code, 82 points in 14D | 0.198235113449 | **0.198206312378** | New record, verified at 50 digits |
 | Spherical code, 453 points in 5D | 0.848240351265 | **0.848235083286** | New record, verified at 50 digits |
 | Spherical code, 54 points in 21D | 0.066663628471 | **0.066663400245** | New record, verified at 50 digits |
@@ -23,7 +26,7 @@ An AI research lab built on Meta's Muse models that hunts for new world records 
 | Spherical code, 76 points in 15D | 0.168263492524 | **0.168263490248** | New record (small: 2.3e-9), verified at 50 digits |
 | Spherical code, 116 points in 6D | 0.596363660542 | **0.596362844051** | New record, verified at 50 digits |
 | Spherical code, 153 points in 4D | 0.849102358280 | **0.849102176174** | New record, verified at 50 digits |
-| Spherical code, 163 points in 4D | 0.856415430312 | **0.856414859773** | New record, verified at 50 digits |
+| Spherical code, 163 points in 4D | 0.856415430312 | **0.856411639618** | New record, verified at 50 digits |
 | Spherical code, 168 points in 4D | 0.859313315478 | **0.859313146285** | New record, verified at 50 digits |
 | Spherical code, 272 points in 4D | 0.898160315150 | **0.898159960309** | New record, verified at 50 digits |
 | Spherical code, 292 points in 4D | 0.903471504338 | **0.903470816563** | New record, verified at 50 digits |

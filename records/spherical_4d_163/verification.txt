@@ -1,3 +1,4 @@
-shape (163, 4) max cosine (50 digits): 0.85641485977266180823 at pair (33, 96)
-improvement over record: 5.70539e-7
-min angle (deg): 31.083604344522
+shape (163, 4) max cosine (50 digits): 0.85641163961825588401 at pair (21, 50)
+improvement over record: 3.79069e-6
+min angle (deg): 31.0839617035976
+found by run: hunt_4d_163 (pictures on)
