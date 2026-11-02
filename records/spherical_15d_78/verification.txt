@@ -1,0 +1,4 @@
+shape (78, 15) max cosine (50 digits): 0.16827419818288232417 at pair (11, 31)
+improvement over record: 2.43641e-8
+min angle (deg): 80.3125075699637
+found by run: hunt_15d_78 (pictures on)

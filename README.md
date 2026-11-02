@@ -13,6 +13,14 @@ An AI research lab built on Meta's Muse models that hunts for new world records 
 | Spherical code, 68 points in 12D (max cosine, lower is better) | 0.219978834878 ([spherical-codes.org](https://spherical-codes.org/)) | **0.219960833863** | New record, verified at 50 digits |
 | Spherical code, 71 points in 12D | 0.230211592242 | **0.230137617429** | New record, verified at 50 digits |
 | Spherical code, 173 points in 5D | 0.758561688405 | **0.758561249594** | New record, verified at 50 digits |
+| Spherical code, 82 points in 14D | 0.198235113449 | **0.198206312378** | New record, verified at 50 digits |
+| Spherical code, 453 points in 5D | 0.848240351265 | **0.848235083286** | New record, verified at 50 digits |
+| Spherical code, 54 points in 21D | 0.066663628471 | **0.066663400245** | New record, verified at 50 digits |
+| Spherical code, 323 points in 7D | 0.664998948391 | **0.664998796049** | New record, verified at 50 digits |
+| Spherical code, 55 points in 21D | 0.066665975723 | **0.066665901555** | New record, verified at 50 digits |
+| Spherical code, 78 points in 15D | 0.168274222547 | **0.168274198183** | New record, verified at 50 digits |
+| Spherical code, 189 points in 12D | 0.354668194086 | **0.354668191490** | New record (small: 2.6e-9), verified at 50 digits |
+| Spherical code, 76 points in 15D | 0.168263492524 | **0.168263490248** | New record (small: 2.3e-9), verified at 50 digits |
 | Spherical code, 116 points in 6D | 0.596363660542 | **0.596362844051** | New record, verified at 50 digits |
 | Spherical code, 153 points in 4D | 0.849102358280 | **0.849102176174** | New record, verified at 50 digits |
 | Spherical code, 163 points in 4D | 0.856415430312 | **0.856414859773** | New record, verified at 50 digits |
