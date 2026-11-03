@@ -1,0 +1,4 @@
+shape (154, 10) max cosine (50 digits): 0.4012518888631884596 at pair (68, 72)
+improvement over record: 0.00297251
+min angle (deg): 66.3435365484478
+found by run: hunt_10d_154 (pictures on)

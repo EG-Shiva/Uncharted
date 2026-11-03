@@ -1,0 +1,4 @@
+shape (176, 9) max cosine (50 digits): 0.46118257534462104275 at pair (23, 58)
+improvement over record: 1.94904e-7
+min angle (deg): 62.5365567117489
+found by run: hunt_9d_176 (pictures on)

@@ -1,0 +1,4 @@
+shape (131, 9) max cosine (50 digits): 0.42245455595142718576 at pair (36, 109)
+improvement over record: 2.85966e-8
+min angle (deg): 65.0103488638264
+found by run: hunt_9d_131 (pictures on)

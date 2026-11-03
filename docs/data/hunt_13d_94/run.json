@@ -1,0 +1,12 @@
+{
+  "problem": "spherical_code_13d_94",
+  "title": "94 points on the sphere in 13 dimensions: minimise the largest pairwise cosine",
+  "best_known": 0.244075595552,
+  "best_known_source": "spherical-codes.org table (Henry Cohn), entry d=13, n=94",
+  "maximize": false,
+  "worker_model": "muse-spark-1.3-contributor",
+  "lead_model": "muse-wonder-1.0",
+  "workers": 6,
+  "use_images": true,
+  "started": 1793660586.061385
+}

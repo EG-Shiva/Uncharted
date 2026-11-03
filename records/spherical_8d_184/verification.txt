@@ -1,0 +1,4 @@
+shape (184, 8) max cosine (50 digits): 0.49998295303167985949 at pair (88, 171)
+improvement over record: 2.25738e-6
+min angle (deg): 60.0011278119372
+found by run: hunt_8d_184 (pictures on)

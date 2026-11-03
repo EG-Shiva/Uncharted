@@ -1,0 +1,4 @@
+shape (59, 22) max cosine (50 digits): 0.066648627498278570966 at pair (18, 33)
+improvement over record: 3.23318e-7
+min angle (deg): 86.1784821428174
+found by run: hunt_22d_59 (pictures on)
